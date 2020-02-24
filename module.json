@@ -1,0 +1,8 @@
+{
+    "alias": "webed-core",
+    "name": "WebEd core",
+    "author": "Tedozi Manson - <a href=\"https://github.com/duyphan2502\">https://github.com/duyphan2502</a>",
+    "description": "WebEd base core",
+    "namespace": "WebEd\\Base\\Core",
+    "autoload": "psr-4"
+}
