@@ -1,10 +1,10 @@
-<?php namespace WebEd\Base\Core\Providers;
+<?php namespace WebEd\Base\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
 class InstallModuleServiceProvider extends ServiceProvider
 {
-    protected $module = 'WebEd\Base\Core';
+    protected $module = 'webed-core';
 
     /**
      * Bootstrap any application services.
@@ -28,7 +28,7 @@ class InstallModuleServiceProvider extends ServiceProvider
 
     }
 
-    private function booted()
+    protected function booted()
     {
         acl_permission()
             ->registerPermission('Access to dashboard', 'access-dashboard', $this->module)

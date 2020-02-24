@@ -1,5 +1,25 @@
 <?php
 
+if (!function_exists('admin_bar')) {
+    /**
+     * @return \WebEd\Base\Support\AdminBar
+     */
+    function admin_bar()
+    {
+        return \WebEd\Base\Facades\AdminBarFacade::getFacadeRoot();
+    }
+}
+
+if (!function_exists('dashboard_menu')) {
+    /**
+     * @return \WebEd\Base\Menu\Support\DashboardMenu
+     */
+    function dashboard_menu()
+    {
+        return \WebEd\Base\Menu\Facades\DashboardMenuFacade::getFacadeRoot();
+    }
+}
+
 if (!function_exists('get_cms_version')) {
     /**
      * @return string
@@ -9,9 +29,13 @@ if (!function_exists('get_cms_version')) {
         try {
             $composerLockFile = json_decode(get_file_data(base_path('composer.lock')), true);
             $packages = collect(array_get($composerLockFile, 'packages'));
-            return array_get($packages->where('name', '=', 'sgsoft-studio/base')->first(), 'version');
+            $webedBase = $packages->where('name', '=', 'sgsoft-studio/base')->first();
+            if (!$webedBase) {
+                return '3.1';
+            }
+            return array_get($webedBase, 'version');
         } catch (\Exception $exception) {
-            return '3.0';
+            return '3.1';
         }
     }
 }
@@ -22,7 +46,7 @@ if (!function_exists('load_module_helpers')) {
      */
     function load_module_helpers($dir)
     {
-        \WebEd\Base\Core\Support\Helper::loadModuleHelpers($dir);
+        \WebEd\Base\Support\Helper::loadModuleHelpers($dir);
     }
 }
 
@@ -31,12 +55,12 @@ if (!function_exists('get_image')) {
      * @param $fields
      * @param $updateTo
      */
-    function get_image($image, $default = '/admin/images/no-image.png')
+    function get_image($image, $default = 'admin/images/no-image.png')
     {
         if (!$image || !trim($image)) {
-            return $default;
+            return asset($default);
         }
-        return $image;
+        return asset($image);
     }
 }
 
@@ -82,11 +106,11 @@ if (!function_exists('json_encode_prettify')) {
     }
 }
 
-if (!function_exists('is_in_dashboard')) {
+if (!function_exists('is_admin_panel')) {
     /**
      * @return bool
      */
-    function is_in_dashboard()
+    function is_admin_panel()
     {
         $segment = request()->segment(1);
         if ($segment === config('webed.admin_route', 'admincp')) {

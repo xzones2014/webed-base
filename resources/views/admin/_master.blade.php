@@ -7,6 +7,8 @@
 <html lang="en">
 <!--<![endif]-->
 <head>
+    <base href="{{ asset('') }}">
+
     <meta charset="utf-8"/>
     <title>{{ $pageTitle or 'Dashboard' }} | WebEd</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -14,15 +16,17 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta content="Admin dashboard - WebEd" name="description"/>
 
-    <base href="{{ asset('') }}">
-
     {!! \Assets::renderStylesheets() !!}
 
-    @php do_action('header_css') @endphp
+    @php do_action(BASE_ACTION_HEADER_CSS) @endphp
+
+    <link rel="stylesheet" href="{{ asset('admin/theme/lte/css/AdminLTE.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('admin/theme/lte/css/skins/_all-skins.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('admin/css/style.css') }}">
 
     @yield('css')
 
-    <link rel="shortcut icon" href="{{ get_settings('favicon', 'favicon.png') }}"/>
+    <link rel="shortcut icon" href="{{ get_setting('favicon', 'favicon.png') }}"/>
 
     <script type="text/javascript">
         var BASE_URL = '{{ asset('') }}',
@@ -31,10 +35,10 @@
 
     {!! \Assets::renderScripts('top') !!}
 
-    @php do_action('header_js') @endphp
+    @php do_action(BASE_ACTION_HEADER_JS) @endphp
 </head>
 
-<body class="{{ $bodyClass or '' }} skin-purple sidebar-mini on-loading @php do_action('body_class') @endphp">
+<body class="{{ $bodyClass or '' }} skin-red-light sidebar-mini fixed on-loading @php do_action(BASE_ACTION_BODY_CLASS) @endphp">
 
 <!-- Loading state -->
 <div class="page-spinner-bar">
@@ -92,10 +96,15 @@
 <![endif]-->
 
 {{--BEGIN plugins--}}
+<script src="{{ asset('admin/theme/lte/js/app.js') }}"></script>
+<script src="{{ asset('admin/js/webed-core.js') }}"></script>
+<script src="{{ asset('admin/theme/lte/js/demo.js') }}"></script>
 {!! \Assets::renderScripts('bottom') !!}
 {{--END plugins--}}
 
-@php do_action('footer_js') @endphp
+@php do_action(BASE_ACTION_FOOTER_JS) @endphp
+
+<script src="{{ asset('admin/js/script.js') }}"></script>
 
 @yield('js')
 

@@ -1,114 +1,48 @@
-<?php namespace WebEd\Base\Core\Repositories\Eloquent;
+<?php namespace WebEd\Base\Repositories\Eloquent;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use WebEd\Base\Core\Models\Contracts\BaseModelContract;
-use WebEd\Base\Core\Models\EloquentBase;
-use WebEd\Base\Core\Repositories\AbstractBaseRepository;
+use Illuminate\Support\Facades\Log;
+use WebEd\Base\Models\Contracts\BaseModelContract;
+use WebEd\Base\Models\EloquentBase;
+use WebEd\Base\Repositories\AbstractBaseRepository;
 
 /**
- * @property EloquentBase|Builder $model
- * @property EloquentBase|Builder $originalModel
+ * @property BaseModelContract|EloquentBase|Builder $model
+ * @property BaseModelContract|EloquentBase|Builder $originalModel
  */
 abstract class EloquentBaseRepository extends AbstractBaseRepository
 {
     /**
-     * @param $field
-     * @param null $operator
-     * @param null $value
-     * @return $this
+     * @param array $where
      */
-    public function where($field, $operator = null, $value = null)
+    protected function applyConditions(array $where)
     {
-        if (is_array($field)) {
-            $this->model = $this->model->where($field);
-        } else {
-            if (sizeof(func_get_args()) == 2) {
-                $this->model = $this->model->where($field, '=', $operator);
+        foreach ($where as $field => $value) {
+            if (is_array($value)) {
+                list($field, $condition, $val) = $value;
+                if (strtoupper($condition) == 'IN') {
+                    $this->model = $this->model->whereIn($field, $val);
+                } else {
+                    $this->model = $this->model->where($field, $condition, $val);
+                }
             } else {
-                $this->model = $this->model->where($field, $operator, $value);
+                $this->model = $this->model->where($field, '=', $value);
             }
         }
-        $this->builderModel = $this->model;
-        $this->builder['where'][] = func_get_args();
-
-        return $this;
     }
 
     /**
-     * @param $field
-     * @param null $type
-     * @return $this
-     */
-    public function orderBy($field, $type = null)
-    {
-        if (is_array($field)) {
-            foreach ($field as $key => $row) {
-                $this->model = $this->model->orderBy($key, $row);
-            }
-        } else {
-            $this->model = $this->model->orderBy($field, $type);
-        }
-        $this->builderModel = $this->model;
-        $this->builder['orderBy'][] = func_get_args();
-
-        return $this;
-    }
-
-    /**
-     * @param $id
-     * @param array $columns
-     * @return EloquentBase|null
-     */
-    public function find($id, $columns = ['*'])
-    {
-        $this->applyCriteria();
-        $this->builderModel = $this->model;
-        $result = $this->model->find($id, $columns);
-        $this->resetModel();
-        return $result;
-    }
-
-    /**
-     * @return mixed
+     * @return int
      */
     public function count()
     {
         $this->applyCriteria();
-        $this->builderModel = $this->model;
+
         $result = $this->model->count();
+
         $this->resetModel();
-        return $result;
-    }
 
-    /**
-     * @param $howManyItem
-     * @return $this
-     */
-    public function take($howManyItem)
-    {
-        $this->model = $this->model->take($howManyItem);
-        $this->builderModel = $this->model;
-        $this->builder['take'] = func_get_args();
-
-        return $this;
-    }
-
-    /**
-     * @param array $columns
-     * @return Collection
-     */
-    public function get($columns = ['*'])
-    {
-        if (!is_array($columns)) {
-            $columns = func_get_args();
-        }
-
-        $this->applyCriteria();
-        $this->builderModel = $this->model;
-        $result = $this->model->get($columns);
-        $this->resetModel();
         return $result;
     }
 
@@ -116,85 +50,68 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
      * @param array $columns
      * @return mixed
      */
-    public function first($columns = ['*'])
+    public function first(array $columns = ['*'])
     {
         $this->applyCriteria();
-        $this->builderModel = $this->model;
+
         $result = $this->model->first($columns);
+
         $this->resetModel();
+
         return $result;
     }
 
     /**
-     * @param $perPage
+     * @param int $id
      * @param array $columns
-     * @param string $pageName
-     * @param null $currentPaged
-     * @return LengthAwarePaginator
+     * @return EloquentBase|Builder|null
      */
-    public function paginate($perPage, $columns = ['*'], $pageName = 'page', $currentPaged = null)
+    public function find($id, $columns = ['*'])
     {
         $this->applyCriteria();
-        $this->builderModel = $this->model;
-        $result = $this->model->paginate($perPage, $columns, $pageName, $currentPaged);
+
+        $result = $this->model->find($id, $columns);
+
+        $this->resetModel();
+
+        return $result;
+    }
+
+    /**
+     * @param array $condition
+     * @return EloquentBase|Builder|null|mixed
+     */
+    public function findWhere(array $condition)
+    {
+        $this->applyConditions($condition);
+        $result = $this->model->first();
+
+        $this->resetModel();
+
+        return $result;
+    }
+
+    /**
+     * @param array $condition
+     * @param array $optionalFields
+     * @param bool $forceCreate
+     * @return EloquentBase|Builder|null
+     */
+    public function findWhereOrCreate(array $condition, array $optionalFields = [], $forceCreate = false)
+    {
+        $result = $this->findWhere($condition);
+        if (!$result) {
+            $data = array_merge((array)$optionalFields, $condition);
+            $id = $this->create($data);
+            $result = $this->find($id);
+        }
         $this->resetModel();
         return $result;
     }
 
     /**
-     * @param $fields
-     * @return EloquentBase|null
-     */
-    public function findByFields($fields)
-    {
-        return $this->model->where($fields)->first();
-    }
-
-    /**
-     * @param $fields
-     * @param null $optionalFields
-     * @param bool $forceCreate
-     * @return EloquentBase|null
-     */
-    public function findByFieldsOrCreate($fields, $optionalFields = null, $forceCreate = false)
-    {
-        $result = $this->model->where($fields)->first();
-        if (!$result) {
-            $data = array_merge((array)$optionalFields, $fields);
-            if ($forceCreate) {
-                $this->model->forceCreate($data);
-            } else {
-                $this->model->create($data);
-            }
-            $result = $this->model->where($fields)->first();
-        }
-        return $result;
-    }
-
-    /**
-     * Create a new item.
-     * Only fields listed in $fillable of model can be filled
-     * @param array $data
-     * @return EloquentBase
-     */
-    public function create(array $data)
-    {
-        return $this->model->create($data);
-    }
-
-    /**
-     * Create a new item, no validate
-     * @param $data
-     * @return EloquentBase
-     */
-    public function forceCreate(array $data)
-    {
-        return $this->model->forceCreate($data);
-    }
-
-    /**
-     * @param $id
-     * @return mixed
+     * @param int $id
+     * @return EloquentBase|Builder
      */
     public function findOrNew($id)
     {
@@ -202,165 +119,152 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
     }
 
     /**
-     * Validate model then edit
-     * @param BaseModelContract|int|null $id
-     * @param $data
-     * @param bool $allowCreateNew
-     * @param bool $justUpdateSomeFields
-     * @return array
+     * @param array $columns
+     * @return Collection
      */
-    public function editWithValidate($id, array $data, $allowCreateNew = false, $justUpdateSomeFields = false)
+    public function get(array $columns = ['*'])
     {
-        if ($id instanceof EloquentBase) {
-            $item = $id;
-        } else {
-            if ($allowCreateNew != true) {
-                $item = $this->find($id);
-                if (!$item) {
-                    return response_with_messages(['Model not exists with id: ' . $id], true, \Constants::NOT_FOUND_CODE);
-                }
-            } else {
-                $item = $this->findOrNew($id);
-            }
+        $this->applyCriteria();
+
+        $result = $this->model->get($columns);
+
+        $this->resetModel();
+
+        return $result;
+    }
+
+    /**
+     * @param array $condition
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getWhere(array $condition, array $columns = ['*'])
+    {
+        $this->applyCriteria();
+
+        $this->applyConditions($condition);
+
+        $result = $this->model->get($columns);
+
+        $this->resetModel();
+
+        return $result;
+    }
+
+    /**
+     * @param int $perPage
+     * @param array $columns
+     * @param int $currentPaged
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function paginate($perPage, array $columns = ['*'], $currentPaged = 1)
+    {
+        $this->applyCriteria();
+
+        $result = $this->model->paginate($perPage, $columns, 'page', $currentPaged);
+
+        $this->resetModel();
+
+        return $result;
+    }
+
+    /**
+     * @param array $data
+     * @param bool $force
+     * @return int|null
+     */
+    public function create(array $data, $force = false)
+    {
+        $method = $force ? 'forceCreate' : 'create';
+        try {
+            $item = $this->model->$method($data);
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+            $this->resetModel();
+            return null;
         }
-
-        /**
-         * Unset some data that not changed
-         */
-        if ($item->{$item->getPrimaryKey()}) {
-            $this->unsetNotChangedData($item, $data);
-        }
-
-        /**
-         * Unset not editable fields
-         */
-        $cannotEdit = collect($this->unsetNotEditableFields($data));
-        if ($cannotEdit->count()) {
-            $cannotEdit = ['Cannot edit these fields: ' . $cannotEdit->implode(', ')];
-        } else {
-            $cannotEdit = [];
-        }
-
-        /**
-         * Nothing to update
-         */
-        if (!$data) {
-            return response_with_messages(array_merge(['Request completed'], $cannotEdit), false, \Constants::SUCCESS_NO_CONTENT_CODE, $item);
-        }
-
-        /**
-         * Validate model
-         */
-        $validate = $this->validateModel($data, $justUpdateSomeFields);
-
-        /**
-         * Do not passed validate
-         */
-        if (!$validate) {
-            return response_with_messages(array_merge($this->getRuleErrorMessages(), $cannotEdit), true, \Constants::ERROR_CODE);
-        }
-
         $primaryKey = $this->getPrimaryKey();
+        return $item->$primaryKey;
+    }
 
+    /**
+     * @param EloquentBase|Builder|int|null $id
+     * @param array $data
+     * @return int|null
+     */
+    public function createOrUpdate($id, array $data)
+    {
         /**
-         * Prevent edit the primary key
+         * @var EloquentBase|Builder $item
          */
-        if (isset($data[$primaryKey])) {
-            unset($data[$primaryKey]);
-        }
+        $item = $id instanceof EloquentBase ? $id : $this->model->find($id) ?: new $this->model;
 
-        foreach ($data as $key => $row) {
-            $item->$key = $row;
-        }
+        $item = $item->fill($data);
 
         try {
             $item->save();
         } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
             $this->resetModel();
-            return response_with_messages(array_merge([$exception->getMessage()], $cannotEdit), true, \Constants::ERROR_CODE);
+            return null;
         }
         $this->resetModel();
-        return response_with_messages(array_merge(['Request completed'], $cannotEdit), false, \Constants::SUCCESS_CODE, $item);
+        $primaryKey = $this->getPrimaryKey();
+        return $item->$primaryKey;
     }
 
     /**
-     * Find items by ids and edit them
+     * @param EloquentBase|Builder|int $id
+     * @param array $data
+     * @return int|null
+     */
+    public function update($id, array $data)
+    {
+        if ($id instanceof EloquentBase) {
+            $item = $id;
+        } else {
+            $item = $this->model->find($id);
+        }
+
+        try {
+            $item->update($data);
+        } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
+            $this->resetModel();
+            dd($exception->getMessage());
+            return null;
+        }
+        $this->resetModel();
+        $primaryKey = $this->getPrimaryKey();
+        return $item->$primaryKey;
+    }
+
+    /**
      * @param array $ids
      * @param array $data
-     * @param bool $justUpdateSomeFields
-     * @return array
+     * @return bool
      */
-    public function updateMultiple(array $ids, array $data, $justUpdateSomeFields = false)
+    public function updateMultiple(array $ids, array $data)
     {
-        /**
-         * Unset not editable fields
-         */
-        $cannotEdit = collect($this->unsetNotEditableFields($data));
-        if ($cannotEdit->count()) {
-            $cannotEdit = ['Cannot update these fields' . $cannotEdit->implode(', ')];
-        } else {
-            $cannotEdit = [];
-        }
-
-        $validate = $this->validateModel($data, $justUpdateSomeFields);
-        if (!$validate) {
-            return response_with_messages(array_merge($this->getRuleErrorMessages(), $cannotEdit), true, \Constants::ERROR_CODE);
-        }
-
         $items = $this->model->whereIn('id', $ids);
 
         try {
             $items->update($data);
         } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
             $this->resetModel();
-            return response_with_messages(array_merge([$exception->getMessage()], $cannotEdit), true, \Constants::ERROR_CODE);
+            return false;
         }
         $this->resetModel();
-        return response_with_messages(array_merge(['Request completed'], $cannotEdit), false, \Constants::SUCCESS_NO_CONTENT_CODE);
+        return true;
     }
 
     /**
-     * Find items by fields and edit them
-     * @param array $fields
-     * @param $data
-     * @param bool $justUpdateSomeFields
-     * @return array
+     * @param EloquentBase|Builder|int|array|null $id
+     * @param bool $force
+     * @return bool
      */
-    public function update(array $data, $justUpdateSomeFields = false)
-    {
-        /**
-         * Unset not editable fields
-         */
-        $cannotEdit = collect($this->unsetNotEditableFields($data));
-        if ($cannotEdit->count()) {
-            $cannotEdit = ['Cannot update these fields' . $cannotEdit->implode(', ')];
-        } else {
-            $cannotEdit = [];
-        }
-
-        $validate = $this->validateModel($data, $justUpdateSomeFields);
-        if (!$validate) {
-            return response_with_messages(array_merge($this->getRuleErrorMessages(), $cannotEdit), true, \Constants::ERROR_CODE);
-        }
-
-        $this->applyCriteria();
-
-        try {
-            $this->model->update($data);
-        } catch (\Exception $exception) {
-            $this->resetModel();
-            return response_with_messages(array_merge([$exception->getMessage()], $cannotEdit), true, \Constants::ERROR_CODE);
-        }
-        $this->resetModel();
-        return response_with_messages(array_merge(['Request completed'], $cannotEdit), false, \Constants::SUCCESS_NO_CONTENT_CODE);
-    }
-
-    /**
-     * Delete items by id
-     * @param EloquentBase|int|array|null $id
-     * @return mixed
-     */
-    public function delete($id = null)
+    public function delete($id, $force = false)
     {
         if ($id) {
             if (is_array($id)) {
@@ -374,13 +278,16 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
             $this->applyCriteria();
         }
 
+        $method = $force ? 'forceDelete' : 'delete';
+
         try {
-            $this->model->delete();
+            $this->model->$method();
         } catch (\Exception $exception) {
+            Log::error($exception->getMessage());
             $this->resetModel();
-            return response_with_messages($exception->getMessage(), true, \Constants::ERROR_CODE);
+            return false;
         }
         $this->resetModel();
-        return response_with_messages('Request completed', false, \Constants::SUCCESS_NO_CONTENT_CODE);
+        return true;
     }
 }

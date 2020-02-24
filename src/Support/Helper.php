@@ -1,6 +1,9 @@
-<?php namespace WebEd\Base\Core\Support;
+<?php namespace WebEd\Base\Support;
 
 class Helper {
+    /**
+     * @param $dir
+     */
     public static function loadModuleHelpers($dir)
     {
         $helpers = \File::glob($dir . '/../../helpers/*.php');

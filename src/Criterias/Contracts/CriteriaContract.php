@@ -1,16 +1,15 @@
-<?php namespace WebEd\Base\Core\Criterias\Contracts;
+<?php namespace WebEd\Base\Criterias\Contracts;
 
-use WebEd\Base\Core\Models\Contracts\BaseModelContract;
-use WebEd\Base\Core\Repositories\AbstractBaseRepository;
-use WebEd\Base\Core\Repositories\Contracts\AbstractRepositoryContract;
+use WebEd\Base\Models\Contracts\BaseModelContract;
+use WebEd\Base\Repositories\AbstractBaseRepository;
+use WebEd\Base\Repositories\Contracts\AbstractRepositoryContract;
 
 interface CriteriaContract
 {
     /**
-     * @param $model
-     * @param AbstractRepositoryContract $repository
-     * @param array $crossData
+     * @param BaseModelContract $model
+     * @param AbstractBaseRepository $repository
      * @return mixed
      */
-    public function apply($model, AbstractRepositoryContract $repository, array $crossData = []);
+    public function apply($model, AbstractRepositoryContract $repository);
 }

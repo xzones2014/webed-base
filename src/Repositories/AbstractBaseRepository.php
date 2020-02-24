@@ -1,18 +1,15 @@
-<?php namespace WebEd\Base\Core\Repositories;
+<?php namespace WebEd\Base\Repositories;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use WebEd\Base\Core\Criterias\Contracts\CriteriaContract;
-use WebEd\Base\Core\Exceptions\Repositories\WrongCriteria;
-use WebEd\Base\Core\Models\Contracts\BaseModelContract;
-use WebEd\Base\Core\Repositories\Contracts\AbstractRepositoryContract;
-use WebEd\Base\Core\Repositories\Contracts\RepositoryValidatorContract;
-use WebEd\Base\Core\Repositories\Traits\RepositoryValidatable;
+use WebEd\Base\Criterias\AbstractCriteria;
+use WebEd\Base\Criterias\Contracts\CriteriaContract;
+use WebEd\Base\Exceptions\Repositories\WrongCriteria;
+use WebEd\Base\Models\Contracts\BaseModelContract;
+use WebEd\Base\Repositories\Contracts\AbstractRepositoryContract;
 
-abstract class AbstractBaseRepository implements AbstractRepositoryContract, RepositoryValidatorContract
+abstract class AbstractBaseRepository implements AbstractRepositoryContract
 {
-    use RepositoryValidatable;
-
     /**
      * @var BaseModelContract
      */
@@ -22,11 +19,6 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
      * @var BaseModelContract
      */
     protected $originalModel;
-
-    /**
-     * @var BaseModelContract
-     */
-    protected $builderModel;
 
     /**
      * @var array
@@ -39,23 +31,16 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
     protected $skipCriteria = false;
 
     /**
-     * @var int
+     * Determine when enabled cache for query
+     * @var bool
      */
-    protected $currentPaged;
-
-    /**
-     * @var array
-     */
-    protected $select = [];
-
-    protected $builder = [];
+    protected $cacheEnabled;
 
     public function __construct(BaseModelContract $model)
     {
         $this->model = $model;
         $this->originalModel = $model;
-        $this->builderModel = $model;
-        $this->cacheEnabled = config('webed-caching.repository.enabled');
+        $this->cacheEnabled = (bool)config('webed-caching.repository.enabled');
     }
 
     /**
@@ -64,22 +49,6 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
     public function getModel()
     {
         return $this->model;
-    }
-
-    /**
-     * @return BaseModelContract
-     */
-    public function getBuilderModel()
-    {
-        return $this->builderModel;
-    }
-
-    /**
-     * @return array
-     */
-    public function getBuilder()
-    {
-        return $this->builder;
     }
 
     /**
@@ -101,21 +70,6 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
     }
 
     /**
-     * @param $columns
-     * @return $this
-     */
-    public function select($columns)
-    {
-        if (!is_array($columns)) {
-            $this->select = func_get_args();
-        } else {
-            $this->select = $columns;
-        }
-        $this->builder['select'] = func_get_args();
-        return $this;
-    }
-
-    /**
      * @return array
      */
     public function getCriteria()
@@ -124,25 +78,19 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
     }
 
     /**
-     * @param $criteria
+     * @param AbstractCriteria $criteria
      * @param array $crossData
      * @return $this
      * @throws WrongCriteria
      */
-    public function pushCriteria($criteria, array $crossData = [])
+    public function pushCriteria(CriteriaContract $criteria)
     {
-        if (is_string($criteria)) {
-            $criteria = app($criteria);
-        }
-        if (!$criteria instanceof CriteriaContract) {
-            throw new WrongCriteria('Class ' . get_class($criteria) . ' must be an instance of ' . CriteriaContract::class);
-        }
-        $this->criteria[get_class($criteria)] = [$criteria, $crossData];
+        $this->criteria[get_class($criteria)] = $criteria;
         return $this;
     }
 
     /**
-     * @param $criteria
+     * @param AbstractCriteria|string $criteria
      * @return $this
      */
     public function dropCriteria($criteria)
@@ -179,35 +127,20 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
         $criteria = $this->getCriteria();
         if ($criteria) {
             foreach ($criteria as $className => $c) {
-                if ($c[0] instanceof CriteriaContract) {
-                    $this->model = $c[0]->apply($this->model, $this, $c[1]);
-                    $this->builder['criteria'][$className] = [$className, $c[1]];
-                }
+                $this->model = $c->apply($this->model, $this);
             }
         }
-        if ($this->select) {
-            $this->model = $this->model->select($this->select);
-        }
-
-        $this->builderModel = $this->model;
 
         return $this;
     }
 
     /**
-     * @param CriteriaContract|string $criteria
+     * @param AbstractCriteria|string $criteria
      * @return Collection|BaseModelContract|LengthAwarePaginator|null|mixed
      */
-    public function getByCriteria($criteria, array $crossData = [])
+    public function getByCriteria(CriteriaContract $criteria)
     {
-        if (is_string($criteria)) {
-            $criteria = app($criteria);
-        }
-        if (!$criteria instanceof CriteriaContract) {
-            throw new WrongCriteria('Class ' . get_class($criteria) . ' must be an instance of ' . CriteriaContract::class);
-        }
-
-        return $criteria->apply($this->originalModel, $this, $crossData);
+        return $criteria->apply($this->originalModel, $this);
     }
 
     /**
@@ -218,17 +151,101 @@ abstract class AbstractBaseRepository implements AbstractRepositoryContract, Rep
         $this->model = $this->originalModel;
         $this->skipCriteria = false;
         $this->criteria = [];
-        $this->select = [];
+        $this->cacheEnabled = config('webed-caching.repository.enabled');
         return $this;
     }
 
     /**
-     * @return $this
+     * @return int
      */
-    public function resetBuilder()
-    {
-        $this->builder = [];
-        $this->builderModel = $this->originalModel;
-        return $this;
-    }
+    abstract public function count();
+
+    /**
+     * @param array $columns
+     * @return mixed
+     */
+    abstract public function first(array $columns = ['*']);
+
+    /**
+     * @param int $id
+     * @param array $columns
+     * @return BaseModelContract|null
+     */
+    abstract public function find($id, $columns = ['*']);
+
+    /**
+     * @param array $condition
+     * @return BaseModelContract|null|mixed
+     */
+    abstract public function findWhere(array $condition);
+
+    /**
+     * @param array $condition
+     * @param array $optionalFields
+     * @param bool $forceCreate
+     * @return BaseModelContract|null
+     */
+    abstract public function findWhereOrCreate(array $condition, array $optionalFields = [], $forceCreate = false);
+
+    /**
+     * @param int $id
+     * @return BaseModelContract
+     */
+    abstract public function findOrNew($id);
+
+    /**
+     * @param array $columns
+     * @return Collection
+     */
+    abstract public function get(array $columns = ['*']);
+
+    /**
+     * @param array $condition
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    abstract public function getWhere(array $condition, array $columns = ['*']);
+
+    /**
+     * @param int $perPage
+     * @param array $columns
+     * @param int $currentPaged
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    abstract public function paginate($perPage, array $columns = ['*'], $currentPaged = 1);
+
+    /**
+     * @param array $data
+     * @param bool $force
+     * @return int|null
+     */
+    abstract public function create(array $data, $force = false);
+
+    /**
+     * @param BaseModelContract|int|null $id
+     * @param array $data
+     * @return int|null
+     */
+    abstract public function createOrUpdate($id, array $data);
+
+    /**
+     * @param BaseModelContract|int $id
+     * @param array $data
+     * @return int|null
+     */
+    abstract public function update($id, array $data);
+
+    /**
+     * @param array $ids
+     * @param array $data
+     * @return bool
+     */
+    abstract public function updateMultiple(array $ids, array $data);
+
+    /**
+     * @param BaseModelContract|int|array|null $id
+     * @param bool $force
+     * @return mixed
+     */
+    abstract public function delete($id, $force = false);
 }

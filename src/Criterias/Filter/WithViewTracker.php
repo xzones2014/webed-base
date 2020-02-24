@@ -1,25 +1,28 @@
-<?php namespace WebEd\Base\Core\Criterias\Filter;
+<?php namespace WebEd\Base\Criterias\Filter;
 
 use Illuminate\Database\Eloquent\Builder;
-use WebEd\Base\Core\Models\EloquentBase;
-use WebEd\Base\Core\Repositories\Contracts\AbstractRepositoryContract;
-use WebEd\Base\Core\Criterias\AbstractCriteria;
+use WebEd\Base\Models\EloquentBase;
+use WebEd\Base\Repositories\Contracts\AbstractRepositoryContract;
+use WebEd\Base\Criterias\AbstractCriteria;
 
 class WithViewTracker extends AbstractCriteria
 {
-     /**
-      * @param EloquentBase|Builder $model
-      * @param AbstractRepositoryContract $repository
-      * @param array $crossData
-      * @return mixed
-      */
-    public function apply($model, AbstractRepositoryContract $repository, array $crossData = [])
-    {
-        $tableName = $crossData['table'];
-        $primaryKey = $crossData['primaryKey'];
+    protected $relatedModel;
 
+    public function __construct(EloquentBase $relatedModel)
+    {
+        $this->relatedModel = $relatedModel;
+    }
+
+    /**
+     * @param EloquentBase|Builder $model
+     * @param AbstractRepositoryContract $repository
+     * @return mixed
+     */
+    public function apply($model, AbstractRepositoryContract $repository)
+    {
         return $model
-            ->join('view_trackers', $tableName . '.' . $primaryKey, '=', 'view_trackers.entity_id')
-            ->where('view_trackers.entity', '=', $crossData['modelClass']);
+            ->leftJoin('view_trackers', $this->relatedModel->getTable() . '.' . $this->relatedModel->getPrimaryKey(), '=', 'view_trackers.entity_id')
+            ->where('view_trackers.entity', '=', get_class($this->relatedModel));
     }
 }

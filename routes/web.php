@@ -4,10 +4,15 @@ use Illuminate\Support\Facades\Route;
 
 $adminRoute = config('webed.admin_route');
 
+
+
 Route::group(['prefix' => $adminRoute], function (Router $router) use ($adminRoute) {
     $router->get('/', 'DashboardController@getIndex')
         ->name('admin::dashboard.index.get')
         ->middleware('has-permission:access-dashboard');
+
+    Route::get('/change-language/{slug}', 'DashboardLanguageController@getChangeLanguage')
+        ->name('admin::dashboard-language.get');
 
     /**
      * Commands

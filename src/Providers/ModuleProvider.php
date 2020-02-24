@@ -1,15 +1,16 @@
-<?php namespace WebEd\Base\Core\Providers;
+<?php namespace WebEd\Base\Providers;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
-use WebEd\Base\Core\Exceptions\Handler;
-use WebEd\Base\Core\Facades\AdminBarFacade;
-use WebEd\Base\Core\Facades\BreadcrumbsFacade;
-use WebEd\Base\Core\Facades\FlashMessagesFacade;
-use WebEd\Base\Core\Facades\SeoFacade;
-use WebEd\Base\Core\Facades\ViewCountFacade;
-use WebEd\Base\Core\Support\Helper;
+use WebEd\Base\Exceptions\Handler;
+use WebEd\Base\Facades\AdminBarFacade;
+use WebEd\Base\Facades\BreadcrumbsFacade;
+use WebEd\Base\Facades\FlashMessagesFacade;
+use WebEd\Base\Facades\SeoFacade;
+use WebEd\Base\Facades\ViewCountFacade;
+use WebEd\Base\Http\Middleware\BootstrapModuleMiddleware;
+use WebEd\Base\Support\Helper;
 
 class ModuleProvider extends ServiceProvider
 {
@@ -43,6 +44,10 @@ class ModuleProvider extends ServiceProvider
             __DIR__ . '/../../resources/root' => base_path(),
             __DIR__ . '/../../resources/public' => public_path(),
         ], 'webed-public-assets');
+
+        app()->booted(function () {
+            $this->app->register(BootstrapModuleServiceProvider::class);
+        });
     }
 
     /**
@@ -83,15 +88,20 @@ class ModuleProvider extends ServiceProvider
         /**
          * Base providers
          */
+        $this->app->register(HookServiceProvider::class);
         $this->app->register(ConsoleServiceProvider::class);
         $this->app->register(MiddlewareServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
         $this->app->register(ValidateServiceProvider::class);
-        $this->app->register(HookServiceProvider::class);
         $this->app->register(ComposerServiceProvider::class);
         $this->app->register(RepositoryServiceProvider::class);
         $this->app->register(CollectiveServiceProvider::class);
-        $this->app->register(BootstrapModuleServiceProvider::class);
+
+        /**
+         * @var Router $router
+         */
+        $router = $this->app['router'];
+        $router->pushMiddlewareToGroup('web', BootstrapModuleMiddleware::class);
 
         /**
          * Other module providers
@@ -101,7 +111,6 @@ class ModuleProvider extends ServiceProvider
         $this->app->register(\WebEd\Base\ACL\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\ModulesManagement\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\AssetsManagement\Providers\ModuleProvider::class);
-        $this->app->register(\WebEd\Base\Auth\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\Elfinder\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\Hook\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\Menu\Providers\ModuleProvider::class);
@@ -109,6 +118,9 @@ class ModuleProvider extends ServiceProvider
         $this->app->register(\WebEd\Base\ThemesManagement\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\Users\Providers\ModuleProvider::class);
         $this->app->register(\WebEd\Base\Pages\Providers\ModuleProvider::class);
+
+        $this->app->register(\WebEd\Base\CustomFields\Providers\ModuleProvider::class);
+        $this->app->register(\WebEd\Base\StaticBlocks\Providers\ModuleProvider::class);
 
         config(['webed.version' => get_cms_version()]);
     }

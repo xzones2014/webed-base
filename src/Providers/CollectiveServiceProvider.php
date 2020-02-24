@@ -1,4 +1,4 @@
-<?php namespace WebEd\Base\Core\Providers;
+<?php namespace WebEd\Base\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -18,7 +18,7 @@ class CollectiveServiceProvider extends ServiceProvider
         $this->registerHtmlComponents();
     }
 
-    private function registerFormComponents()
+    protected function registerFormComponents()
     {
         /**
          * Custom checkbox
@@ -81,7 +81,7 @@ class CollectiveServiceProvider extends ServiceProvider
         ]);
     }
 
-    private function registerHtmlComponents()
+    protected function registerHtmlComponents()
     {
         /**
          * Label

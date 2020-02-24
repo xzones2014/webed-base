@@ -1,4 +1,4 @@
-<?php namespace WebEd\Base\Core\Http\Middleware;
+<?php namespace WebEd\Base\Http\Middleware;
 
 use \Closure;
 use Illuminate\Http\Request;
@@ -27,7 +27,7 @@ class AdminBarMiddleware
     {
         $response = $next($request);
         if ($request->user() && $request->user()->hasPermission('access-dashboard')) {
-            if (!!(int)get_settings('show_admin_bar')) {
+            if (!!(int)get_setting('show_admin_bar')) {
                 $this->modifyResponse($request, $response);
             }
         }
@@ -46,7 +46,7 @@ class AdminBarMiddleware
     {
         $app = $this->app;
 
-        if (is_in_dashboard() || $app->runningInConsole() || $this->isDebugbarRequest() || $request->ajax()) {
+        if (is_admin_panel() || $app->runningInConsole() || $this->isDebugbarRequest() || $request->ajax()) {
             return $response;
         }
 
@@ -94,7 +94,7 @@ class AdminBarMiddleware
 
     public function injectAdminBarHtml(&$content)
     {
-        $html = \AdminBar::render();
+        $html = admin_bar()->render();
         $pos = strripos($content, '</body>');
         if (false !== $pos) {
             $content = substr($content, 0, $pos) . $html . substr($content, $pos);

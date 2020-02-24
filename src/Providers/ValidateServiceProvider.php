@@ -1,6 +1,6 @@
 <?php
 
-namespace WebEd\Base\Core\Providers;
+namespace WebEd\Base\Providers;
 
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
@@ -28,7 +28,7 @@ class ValidateServiceProvider extends ServiceProvider
 
     }
 
-    private function _validator_UniqueMultiple()
+    protected function _validator_UniqueMultiple()
     {
         Validator::extend('unique_multiple', function ($attribute, $value, $parameters, $validator) {
             $table = array_shift($parameters);
@@ -44,7 +44,7 @@ class ValidateServiceProvider extends ServiceProvider
         });
     }
 
-    private function _validator_DateMultiFormat()
+    protected function _validator_DateMultiFormat()
     {
         /**
          * @see http://stackoverflow.com/questions/32006092/laravel-5-1-date-format-validation-allow-two-formats

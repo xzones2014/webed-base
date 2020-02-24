@@ -1,4 +1,4 @@
-<?php namespace WebEd\Base\Core\Http\Controllers;
+<?php namespace WebEd\Base\Http\Controllers;
 
 use Illuminate\Http\Request;
 use WebEd\Base\Users\Repositories\Contracts\UserRepositoryContract;
@@ -7,7 +7,7 @@ use WebEd\Base\Users\Repositories\UserRepository;
 abstract class BaseAdminController extends BaseController
 {
     /**
-     * @var \WebEd\Base\Core\Support\Breadcrumbs
+     * @var \WebEd\Base\Support\Breadcrumbs
      */
     public $breadcrumbs;
 
@@ -22,11 +22,7 @@ abstract class BaseAdminController extends BaseController
     public $assets;
 
     /**
-     * @var \WebEd\Base\Core\Services\FlashMessages
-     */
-    public $flashMessagesHelper;
-
-    /**
+     * Use to check role
      * @var UserRepository
      */
     protected $userRepository;
@@ -35,35 +31,21 @@ abstract class BaseAdminController extends BaseController
     {
         parent::__construct();
 
-        $this->breadcrumbs = \Breadcrumbs::setBreadcrumbClass('breadcrumb')
-            ->setContainerTag('ol')
-            ->addLink('WebEd', route('admin::dashboard.index.get'), '<i class="icon-home mr5"></i>');
-
         $this->middleware(function (Request $request, $next) {
+            $this->breadcrumbs = \Breadcrumbs::setBreadcrumbClass('breadcrumb')
+                ->setContainerTag('ol')
+                ->addLink('WebEd', route('admin::dashboard.index.get'), '<i class="icon-home mr5"></i>');
+
             $this->loggedInUser = $request->user();
             view()->share([
                 'loggedInUser' => $this->loggedInUser
             ]);
-            \DashboardMenu::setUser($this->loggedInUser);
+            dashboard_menu()->setUser($this->loggedInUser);
+
             return $next($request);
         });
 
         $this->assets = assets_management()->getAssetsFrom('admin');
-
-        $this->assets
-            ->addStylesheetsDirectly([
-                'admin/theme/lte/css/AdminLTE.min.css',
-                'admin/theme/lte/css/skins/_all-skins.min.css',
-                'admin/css/style.css',
-            ])
-            ->addJavascriptsDirectly([
-                'admin/theme/lte/js/app.js',
-                'admin/js/webed-core.js',
-                'admin/theme/lte/js/demo.js',
-                'admin/js/script.js',
-            ], 'bottom');
-
-        $this->flashMessagesHelper = flash_messages();
 
         $this->userRepository = app(UserRepositoryContract::class);
     }
@@ -73,7 +55,7 @@ abstract class BaseAdminController extends BaseController
      */
     protected function getDashboardMenu($activeId = null)
     {
-        \DashboardMenu::setActiveItem($activeId);
+        dashboard_menu()->setActiveItem($activeId);
     }
 
     /**
