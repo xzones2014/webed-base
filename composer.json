@@ -16,7 +16,6 @@
     "repositories": [
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-acl" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-assets-management" },
-        { "type": "vcs", "url": "https://github.com/xzones2014/webed-auth" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-caching" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-elfinder" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-hook" },
@@ -36,7 +35,6 @@
         "laravelcollective/html": "5.4.*",
         "xzones2014/webed-acl": "dev-master",
         "xzones2014/webed-assets-management": "dev-master",
-        "xzones2014/webed-auth": "dev-master",
         "xzones2014/webed-caching": "dev-master",
         "xzones2014/webed-elfinder": "dev-master",
         "xzones2014/webed-hook": "dev-master",
