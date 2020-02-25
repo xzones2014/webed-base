@@ -21,10 +21,16 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
         foreach ($where as $field => $value) {
             if (is_array($value)) {
                 list($field, $condition, $val) = $value;
-                if (strtoupper($condition) == 'IN') {
-                    $this->model = $this->model->whereIn($field, $val);
-                } else {
-                    $this->model = $this->model->where($field, $condition, $val);
+                switch (strtoupper($condition)) {
+                    case 'IN':
+                        $this->model = $this->model->whereIn($field, $val);
+                        break;
+                    case 'NOT_IN':
+                        $this->model = $this->model->whereNotIn($field, $val);
+                        break;
+                    default:
+                        $this->model = $this->model->where($field, $condition, $val);
+                        break;
                 }
             } else {
                 $this->model = $this->model->where($field, '=', $value);
@@ -79,12 +85,17 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
 
     /**
      * @param array $condition
+     * @param array $columns
      * @return EloquentBase|Builder|null|mixed
      */
-    public function findWhere(array $condition)
+    public function findWhere(array $condition, array $columns = ['*'])
     {
+        $this->applyCriteria();
+
         $this->applyConditions($condition);
-        $result = $this->model->first();
+        $result = $this->model
+            ->select($columns)
+            ->first();
 
         $this->resetModel();
 
@@ -171,26 +182,23 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
     /**
      * @param array $data
      * @param bool $force
-     * @return int|null
+     * @return int|null|EloquentBase
      */
     public function create(array $data, $force = false)
     {
         $method = $force ? 'forceCreate' : 'create';
-        try {
-            $item = $this->model->$method($data);
-        } catch (\Exception $exception) {
-            Log::error($exception->getMessage());
-            $this->resetModel();
-            return null;
-        }
+
+        $item = $this->model->$method($data);
+
         $primaryKey = $this->getPrimaryKey();
-        return $item->$primaryKey;
+
+        return $item->$primaryKey ?: $item;
     }
 
     /**
      * @param EloquentBase|Builder|int|null $id
      * @param array $data
-     * @return int|null
+     * @return int|null|EloquentBase
      */
     public function createOrUpdate($id, array $data)
     {
@@ -201,22 +209,19 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
 
         $item = $item->fill($data);
 
-        try {
-            $item->save();
-        } catch (\Exception $exception) {
-            Log::error($exception->getMessage());
-            $this->resetModel();
+        if (!$item->save()) {
             return null;
         }
-        $this->resetModel();
+
         $primaryKey = $this->getPrimaryKey();
-        return $item->$primaryKey;
+
+        return $item->$primaryKey ?: $item;
     }
 
     /**
      * @param EloquentBase|Builder|int $id
      * @param array $data
-     * @return int|null
+     * @return int|null|EloquentBase
      */
     public function update($id, array $data)
     {
@@ -226,17 +231,17 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
             $item = $this->model->find($id);
         }
 
-        try {
-            $item->update($data);
-        } catch (\Exception $exception) {
-            Log::error($exception->getMessage());
-            $this->resetModel();
-            dd($exception->getMessage());
+        $result = $item->update($data);
+
+        $this->resetModel();
+
+        if (!$result) {
             return null;
         }
-        $this->resetModel();
+
         $primaryKey = $this->getPrimaryKey();
-        return $item->$primaryKey;
+
+        return $item->$primaryKey ?: $item;
     }
 
     /**
@@ -248,15 +253,11 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
     {
         $items = $this->model->whereIn('id', $ids);
 
-        try {
-            $items->update($data);
-        } catch (\Exception $exception) {
-            Log::error($exception->getMessage());
-            $this->resetModel();
-            return false;
-        }
+        $result = $items->update($data);
+
         $this->resetModel();
-        return true;
+
+        return $result;
     }
 
     /**
@@ -280,14 +281,84 @@ abstract class EloquentBaseRepository extends AbstractBaseRepository
 
         $method = $force ? 'forceDelete' : 'delete';
 
-        try {
-            $this->model->$method();
-        } catch (\Exception $exception) {
-            Log::error($exception->getMessage());
-            $this->resetModel();
-            return false;
-        }
+        $result = $this->model->$method();
+
         $this->resetModel();
-        return true;
+
+        return !!$result;
+    }
+
+    /**
+     * @param array $condition
+     * @param bool $force
+     * @return bool
+     */
+    public function deleteWhere(array $condition, $force = false)
+    {
+        $this->applyConditions($condition);
+
+        $method = $force ? 'forceDelete' : 'delete';
+
+        $result = $this->model->$method();
+
+        $this->resetModel();
+
+        return !!$result;
+    }
+
+    /**
+     * @param array $params
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Database\Eloquent\Collection|Collection|mixed
+     */
+    public function advancedGet(array $params = [])
+    {
+        $this->applyCriteria();
+
+        $params = array_merge([
+            'condition' => [
+                //'status' => 'activated',
+            ],
+            'order_by' => [
+                //'order' => 'ASC',
+                //'created_at' => 'DESC',
+            ],
+            'take' => null,
+            'paginate' => [
+                'per_page' => null,
+                'current_paged' => 1
+            ],
+            'select' => ['*'],
+            'with' => [
+
+            ],
+        ], $params);
+
+        $this->applyConditions($params['condition']);
+
+        if ($params['select']) {
+            $this->model = $this->model->select($params['select']);
+        }
+
+        foreach ($params['order_by'] as $column => $direction) {
+            $this->model = $this->model->orderBy($column, $direction);
+        }
+
+        foreach ($params['with'] as $with) {
+            $this->model = $this->model->with($with);
+        }
+
+        if ($params['take'] == 1) {
+            $result = $this->model->first();
+        } elseif ($params['take']) {
+            $result = $this->model->take($params['take'])->get();
+        } elseif ($params['paginate']['per_page']) {
+            $result = $this->model->paginate($params['paginate']['per_page'], ['*'], 'page', $params['paginate']['current_paged']);
+        } else {
+            $result = $this->model->get();
+        }
+
+        $this->resetModel();
+
+        return $result;
     }
 }

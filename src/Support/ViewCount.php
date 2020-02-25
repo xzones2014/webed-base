@@ -36,4 +36,17 @@ class ViewCount
         ]);
         return $this->repository->increase($viewTracker);
     }
+
+    public function get($entity, $entityId)
+    {
+        if ($entity instanceof BaseModelContract) {
+            $entity = get_class($entity);
+        }
+        $viewTracker = $this->repository->findWhere([
+            'entity' => $entity,
+            'entity_id' => $entityId,
+        ]);
+        return $viewTracker;
+        //return $this->repository->get($viewTracker);
+    }
 }

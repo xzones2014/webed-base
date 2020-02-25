@@ -20,26 +20,6 @@ if (!function_exists('dashboard_menu')) {
     }
 }
 
-if (!function_exists('get_cms_version')) {
-    /**
-     * @return string
-     */
-    function get_cms_version()
-    {
-        try {
-            $composerLockFile = json_decode(get_file_data(base_path('composer.lock')), true);
-            $packages = collect(array_get($composerLockFile, 'packages'));
-            $webedBase = $packages->where('name', '=', 'sgsoft-studio/base')->first();
-            if (!$webedBase) {
-                return '3.1';
-            }
-            return array_get($webedBase, 'version');
-        } catch (\Exception $exception) {
-            return '3.1';
-        }
-    }
-}
-
 if (!function_exists('load_module_helpers')) {
     /**
      * @param $dir
@@ -52,12 +32,16 @@ if (!function_exists('load_module_helpers')) {
 
 if (!function_exists('get_image')) {
     /**
-     * @param $fields
-     * @param $updateTo
+     * @param $image
+     * @param string $default
+     * @return null|string
      */
     function get_image($image, $default = 'admin/images/no-image.png')
     {
         if (!$image || !trim($image)) {
+            if (!$default) {
+                return null;
+            }
             return asset($default);
         }
         return asset($image);

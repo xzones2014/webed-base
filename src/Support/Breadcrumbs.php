@@ -31,7 +31,7 @@ class Breadcrumbs
      * @param string $title
      * @param string $link
      * @param null|string $icon
-     * @return $this
+     * @return \WebEd\Base\Support\Breadcrumbs
      */
     public function addLink($title, $link = null, $icon = null)
     {
@@ -58,7 +58,7 @@ class Breadcrumbs
     /**
      * Set breadcrumb class
      * @param string $class
-     * @return $this
+     * @return \WebEd\Base\Support\Breadcrumbs
      */
     public function setBreadcrumbClass($class)
     {
@@ -70,7 +70,7 @@ class Breadcrumbs
     /**
      * Set container tag name
      * @param string $tagName
-     * @return $this
+     * @return \WebEd\Base\Support\Breadcrumbs
      */
     public function setContainerTag($tagName)
     {
@@ -82,7 +82,7 @@ class Breadcrumbs
     /**
      * Set item tag name
      * @param string $tagName
-     * @return $this
+     * @return \WebEd\Base\Support\Breadcrumbs
      */
     public function setItemTag($tagName)
     {
@@ -97,19 +97,18 @@ class Breadcrumbs
      */
     public function render()
     {
-        $htmlSrc = '<' . $this->containerTag . ' class="' . $this->breadcrumbClass . '">';
+        $htmlSrc = '<' . $this->containerTag . ' class="' . $this->breadcrumbClass . '">' . PHP_EOL;
         foreach ($this->links as $key => $row) {
-            $icon =
-            $htmlSrc .= '<' . $this->itemTag . '>' . $row . '</' . $this->itemTag . '>';
+            $htmlSrc .= '<' . $this->itemTag . '>' . $row . '</' . $this->itemTag . '>' . PHP_EOL;
         }
-        $htmlSrc .= '</' . $this->containerTag . '>';
+        $htmlSrc .= '</' . $this->containerTag . '>' . PHP_EOL;
 
         return $htmlSrc;
     }
 
     /**
      * Reset all value to default
-     * @return $this
+     * @return \WebEd\Base\Support\Breadcrumbs
      */
     public function reset()
     {

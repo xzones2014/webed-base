@@ -1,10 +1,11 @@
 <?php namespace WebEd\Base\Repositories\Eloquent\Traits;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use WebEd\Base\Models\EloquentBase;
 
 /**
- * @property SoftDeletes|EloquentBase $model
+ * @property SoftDeletes|EloquentBase|Builder $model
  */
 trait EloquentUseSoftDeletes
 {
@@ -32,7 +33,12 @@ trait EloquentUseSoftDeletes
      */
     public function onlyTrashed($bool = true)
     {
-        $this->model = $this->model->onlyTrashed();
+        if ($bool) {
+            $this->model = $this->model->onlyTrashed();
+        } else {
+            $this->model = $this->model->withTrashed();
+        }
+
         return $this;
     }
 
@@ -54,13 +60,10 @@ trait EloquentUseSoftDeletes
             $this->applyCriteria();
         }
 
-        try {
-            $this->model->restore();
-        } catch (\Exception $exception) {
-            $this->resetModel();
-            return false;
-        }
+        $this->model->restore();
+
         $this->resetModel();
+
         return true;
     }
 
@@ -83,13 +86,10 @@ trait EloquentUseSoftDeletes
             $this->applyCriteria();
         }
 
-        try {
-            $this->model->forceDelete();
-        } catch (\Exception $exception) {
-            $this->resetModel();
-            return false;
-        }
+        $this->model->forceDelete();
+
         $this->resetModel();
+
         return true;
     }
 }

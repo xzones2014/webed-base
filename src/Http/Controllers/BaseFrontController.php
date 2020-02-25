@@ -21,7 +21,7 @@ class BaseFrontController extends BaseController
      */
     protected function getMenu($type, $relatedId)
     {
-        $menuHtml = webed_menu_render(get_setting('top_menu', 'top-menu'), [
+        $menuHtml = webed_render_menu(get_setting('main_menu', 'main-menu'), [
             'class' => 'nav navbar-nav navbar-right',
             'container_class' => 'collapse navbar-collapse',
             'has_sub_class' => 'dropdown',
@@ -41,15 +41,21 @@ class BaseFrontController extends BaseController
      * By now, we will get assets from theme if it exists.
      * @param $viewName
      * @param null $data
+     * @param null|string $module
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
-    protected function view($viewName, $data = null)
+    protected function view($viewName, $data = null, $module = null)
     {
         if ($data === null) {
             $data = $this->dis;
         }
-        if(view()->exists($this->currentThemeName . '::' . $viewName)) {
-            return view($this->currentThemeName . '::' . $viewName, $data);
+
+        if ($module === null) {
+            $module = $this->currentThemeName;
+        }
+
+        if(view()->exists($module . '::' . $viewName)) {
+            return view($module . '::' . $viewName, $data);
         }
         return view($viewName, $data);
     }
