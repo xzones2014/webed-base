@@ -31,8 +31,8 @@
     "require": {
         "php": ">=5.6.4",
         "doctrine/dbal": "^2.5",
-        "yajra/laravel-datatables-oracle": "^7.0",
-        "laravelcollective/html": "5.4.*",
+        "yajra/laravel-datatables-oracle": "^8.0",
+        "laravelcollective/html": "5.5.*",
         "xzones2014/webed-acl": "dev-master",
         "xzones2014/webed-assets-management": "dev-master",
         "xzones2014/webed-caching": "dev-master",
