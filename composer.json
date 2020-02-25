@@ -28,6 +28,7 @@
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-pages" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-shortcode" }
     ],
+    "minimum-stability": "dev",
     "require": {
         "php": ">=5.6.4",
         "doctrine/dbal": "^2.5",
