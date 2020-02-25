@@ -3,6 +3,8 @@
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use WebEd\Base\ACL\Models\Role;
+use WebEd\Base\ModulesManagement\Repositories\Contracts\CoreModulesRepositoryContract;
+use WebEd\Base\ModulesManagement\Repositories\CoreModulesRepository;
 use WebEd\Base\Providers\InstallModuleServiceProvider;
 use WebEd\Base\Users\Models\User;
 
@@ -48,17 +50,24 @@ class InstallCmsCommand extends Command
     protected $app;
 
     /**
+     * @var CoreModulesRepository
+     */
+    protected $coreModulesRepository;
+
+    /**
      * Create a new command instance.
      *
      * @return void
      */
-    public function __construct(Filesystem $filesystem)
+    public function __construct(Filesystem $filesystem, CoreModulesRepositoryContract $coreModulesRepository)
     {
         parent::__construct();
 
         $this->files = $filesystem;
 
         $this->app = app();
+
+        $this->coreModulesRepository = $coreModulesRepository;
     }
 
     /**
@@ -85,8 +94,9 @@ class InstallCmsCommand extends Command
         session()->flush();
         session()->regenerate();
         \Artisan::call('cache:clear');
+        \Artisan::call('view:clear');
 
-        $this->info("\nWebEd installed. Current version is " . config('webed.version'));
+        $this->info("\nWebEd installed. Current version is " . get_cms_version());
     }
 
     /**
@@ -158,18 +168,52 @@ class InstallCmsCommand extends Command
 
     protected function registerInstallModuleService()
     {
-        $modules = get_modules_by_type('base')->where('namespace', '!=', 'WebEd\Base');
         $this->app->register(InstallModuleServiceProvider::class);
+
+        $data = [
+            'alias' => 'webed-core',
+        ];
+
+        $cmsVersion = get_cms_version();
+
+        $baseCore = $this->coreModulesRepository->findWhere($data);
+
+        if (!$baseCore) {
+            $this->coreModulesRepository->create(array_merge($data, [
+                'installed_version' => $cmsVersion,
+            ]));
+        } else {
+            $this->coreModulesRepository->update($baseCore, [
+                'installed_version' => get_cms_version(),
+            ]);
+        }
+
+        $modules = get_core_module()->where('namespace', '!=', 'WebEd\Base');
+
+        $corePackages = get_composer_modules();
+
         foreach ($modules as $module) {
-            $namespace = str_replace('\\\\', '\\', array_get($module, 'namespace', '') . '\Providers\InstallModuleServiceProvider');
+            $namespace = str_replace('\\\\', '\\', $module['namespace'] . '\Providers\InstallModuleServiceProvider');
             if (class_exists($namespace)) {
                 $this->app->register($namespace);
             }
+            $currentPackage = $corePackages->where('name', '=', $module['repos'])->first();
+            $data = [
+                'alias' => $module['alias'],
+            ];
+            if ($currentPackage) {
+                $data['installed_version'] = isset($module['version']) ? $module['version'] : $currentPackage['version'];
+            }
+            $coreModule = $this->coreModulesRepository->findWhere([
+                'alias' => $module['alias'],
+            ]);
+            $this->coreModulesRepository->createOrUpdate($coreModule, $data);
         }
         \Artisan::call('vendor:publish', [
             '--tag' => 'webed-public-assets',
             '--force' => true,
         ]);
+        \Artisan::call('cache:clear');
     }
 
     /**

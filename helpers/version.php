@@ -1,5 +1,70 @@
 <?php
 
+if (!function_exists('get_composer_modules')) {
+    /**
+     * @param string $moduleName
+     * @return \Illuminate\Support\Collection|array|null
+     */
+    function get_composer_modules($moduleName = null)
+    {
+        try {
+            $composerLockFile = json_decode(get_file_data(base_path('composer.lock')), true);
+            $packages = collect(array_get($composerLockFile, 'packages'));
+            if ($moduleName) {
+                return $packages->where('name', '=', $moduleName)->first();
+            }
+            return $packages;
+        } catch (\Exception $exception) {
+            return null;
+        }
+    }
+}
+
+if (!function_exists('get_core_module_composer_version')) {
+    /**
+     * @param string $moduleName
+     * @return string
+     */
+    function get_core_module_composer_version($moduleName = null)
+    {
+        try {
+            $module = get_composer_modules($moduleName);
+            if (!$module) {
+                return null;
+            }
+            return array_get($module, 'version');
+        } catch (\Exception $exception) {
+            return null;
+        }
+    }
+}
+
+if (!function_exists('get_core_module_version')) {
+    /**
+     * @param string $alias
+     * @return string|null
+     */
+    function get_core_module_version($alias)
+    {
+        $module = get_core_module($alias);
+        if ($module) {
+            return array_get($module, 'version');
+        }
+        return null;
+    }
+}
+
+if (!function_exists('get_cms_version')) {
+    /**
+     * @return string
+     */
+    function get_cms_version()
+    {
+        $coreModule = get_core_module('webed-core');
+        return isset($coreModule['version']) ? $coreModule['version'] : get_core_module_composer_version('sgsoft-studio/base') ?: '3.1';
+    }
+}
+
 if (!function_exists('module_version_compare')) {
     /**
      * @param $currentVersion
@@ -72,7 +137,7 @@ if (!function_exists('check_module_require')) {
         $messages = [];
         $error = false;
         foreach ($required as $moduleName => $version) {
-            $module = get_module_information($moduleName);
+            $module = get_plugin($moduleName);
             if (!$module || !array_get($module, 'installed') || !array_get($module, 'enabled')) {
                 $messages[] = 'Missing required module: ' . $moduleName;
                 $error = true;
