@@ -26,7 +26,8 @@
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-users" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-pages" },
         { "type": "vcs", "url": "https://github.com/xzones2014/webed-shortcode" },
-        { "type": "vcs", "url": "https://github.com/xzones2014/webed-custom-fields" }
+        { "type": "vcs", "url": "https://github.com/xzones2014/webed-custom-fields" },
+        { "type": "vcs", "url": "https://github.com/xzones2014/webed-static-blocks" }
     ],
     "minimum-stability": "dev",
     "require": {
@@ -46,7 +47,8 @@
         "xzones2014/webed-users": "dev-master",
         "xzones2014/webed-pages": "dev-master",
         "xzones2014/webed-shortcode": "dev-master",
-        "xzones2014/webed-custom-fields": "dev-master"
+        "xzones2014/webed-custom-fields": "dev-master",
+        "xzones2014/webed-static-blocks": "dev-master"
     },
     "autoload": {
         "psr-4": {
