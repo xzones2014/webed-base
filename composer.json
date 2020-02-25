@@ -48,7 +48,7 @@
     },
     "autoload": {
         "psr-4": {
-            "WebEd\\Base\\Core\\": "src"
+            "WebEd\\Base\\": "src"
         },
         "files": [
 
